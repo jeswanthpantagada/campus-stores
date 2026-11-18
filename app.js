@@ -64,6 +64,7 @@
     "Tara Shah",
     "Dev Menon",
   ];
+  const dueOptions = ["Fri 8 pm", "Sat 9 am", "Sat 10 am", "Sat noon"];
   const shifts = [
     {
       time: "Friday · 3:45 pm",
@@ -103,10 +104,12 @@
         who: "Tara Shah",
         due: "Sat 10 am",
         back: false,
+        handover: "",
       },
     ],
     notes: [],
     editing: false,
+    handoverLoan: null,
     onlyOpen: true,
     notice: "Sample shift · All records are fictional.",
   });
@@ -126,9 +129,18 @@
           "'": "&#39;",
         })[c],
     );
-  const opts = (list) =>
+  const opts = (list, selected = "") =>
     list
-      .map(([v, t]) => '<option value="' + esc(v) + '">' + esc(t) + "</option>")
+      .map(
+        ([v, t]) =>
+          '<option value="' +
+          esc(v) +
+          '"' +
+          (v === selected ? " selected" : "") +
+          ">" +
+          esc(t) +
+          "</option>",
+      )
       .join("");
   const btn = (label, act, val = "", style = "") =>
     '<button type="button" data-action="' +
@@ -148,12 +160,14 @@
     "</small></div>" +
     control +
     "</div>";
-  const row = (label, sub, right) =>
+  const row = (label, sub, right, extra = "") =>
     '<div class="row"><div><strong>' +
     esc(label) +
     "</strong><small>" +
     esc(sub) +
-    "</small></div><div>" +
+    "</small>" +
+    extra +
+    "</div><div class=\"row-actions\">" +
     right +
     "</div></div>";
   const badge = (t, good = false) =>
@@ -223,7 +237,7 @@
   function register() {
     let html = head(
       "Loan register",
-      "One slip per physical unit",
+      "One slip per physical unit · includes item type, club, and handover notes",
       s.editing
         ? btn("Cancel", "cancel")
         : btn("New issue slip", "new", "", "primary"),
@@ -259,7 +273,7 @@
         select(
           "Return by",
           "due",
-          ["Fri 8 pm", "Sat 9 am", "Sat 10 am", "Sat noon"].map((d) => [d, d]),
+          dueOptions.map((d) => [d, d]),
         ) +
         '</div><button type="submit" class="primary">Save issue slip</button></form>'
       );
@@ -284,14 +298,49 @@
       .slice()
       .reverse();
     if (!shown.length) html += "<p>No outstanding slips.</p>";
-    for (const l of shown)
-      html += row(
-        "L-" + l.num + " · " + l.asset,
-        l.req + " · " + l.who + " · Due " + l.due,
-        l.back
-          ? badge("Returned")
-          : btn("Record return", "return", String(l.num)),
-      );
+    for (const l of shown) {
+      const unit = getAsset(l.asset);
+      const r = getReq(l.req);
+      const label =
+        "L-" + l.num + " · " + l.asset + (unit ? " · " + unit.type : "");
+      const sub =
+        l.req +
+        (r ? " · " + r.club : "") +
+        " · " +
+        l.who +
+        " · Due " +
+        l.due;
+      let extra = "";
+      if (l.handover) {
+        extra +=
+          '<div class="handover-note"><b>Handover:</b> ' +
+          esc(l.handover) +
+          "</div>";
+      }
+      if (!l.back && s.handoverLoan === l.num) {
+        extra +=
+          '<form class="inline-handover" data-handover="' +
+          l.num +
+          '"><div class="form"><label class="full"><span>Handover note for next shift</span><input type="text" name="handover" maxlength="200" placeholder="e.g. Leela Das has adapter; returning Sat 9 am" value="' +
+          esc(l.handover || "") +
+          '" required /></label><label><span>Updated return by</span><select name="due">' +
+          opts(
+            dueOptions.map((d) => [d, d]),
+            l.due,
+          ) +
+          '</select></label></div><div class="buttons"><button type="submit" class="primary">Save handover</button>' +
+          btn("Cancel", "cancel-handover") +
+          "</div></form>";
+      }
+      const actions = l.back
+        ? badge("Returned")
+        : btn(
+            l.handover ? "Edit handover" : "Handover note",
+            "handover",
+            String(l.num),
+          ) + btn("Record return", "return", String(l.num), "primary");
+      html += row(label, sub, actions, extra);
+    }
     return html;
   }
   function deskbook() {
@@ -390,6 +439,7 @@
       case "tab":
         s.tab = v;
         s.editing = false;
+        s.handoverLoan = null;
         break;
       case "close":
         s.selected = "";
@@ -399,9 +449,16 @@
         break;
       case "new":
         s.editing = true;
+        s.handoverLoan = null;
         break;
       case "cancel":
         s.editing = false;
+        break;
+      case "handover":
+        s.handoverLoan = Number(v);
+        break;
+      case "cancel-handover":
+        s.handoverLoan = null;
         break;
       case "scope":
         s.onlyOpen = v === "0";
@@ -410,6 +467,7 @@
         const l = s.loans.find((l) => l.num === Number(v));
         if (!l || l.back) return;
         l.back = true;
+        if (s.handoverLoan === l.num) s.handoverLoan = null;
         s.notice = l.asset + " returned to stock. Slip L-" + l.num + " closed.";
         break;
       }
@@ -431,6 +489,22 @@
       if (!text) return;
       s.notes.push({ phase: s.phase, text });
       commit("Handover note saved.");
+      return;
+    }
+    if (f.matches("[data-handover]")) {
+      const loanNum = Number(f.dataset.handover);
+      const l = s.loans.find((x) => x.num === loanNum);
+      const text = String(form.get("handover") || "").trim();
+      const due = String(form.get("due") || "");
+      if (!l || l.back || !text) return;
+      l.handover = text;
+      if (dueOptions.includes(due)) l.due = due;
+      s.handoverLoan = null;
+      s.notes.push({
+        phase: s.phase,
+        text: "Slip L-" + l.num + " (" + l.asset + "): " + text + " [Due " + l.due + "]",
+      });
+      commit("Handover note attached to slip L-" + l.num + " and logged in Desk book.");
       return;
     }
     if (!f.matches("[data-issue]")) return;
@@ -456,7 +530,7 @@
       return;
     }
     const num = Math.max(...s.loans.map((l) => l.num)) + 1;
-    s.loans.push({ num, req, asset, who, due, back: false });
+    s.loans.push({ num, req, asset, who, due, back: false, handover: "" });
     s.editing = false;
     commit("Issued " + asset + " to " + who + " on slip L-" + num + ".");
   });
@@ -482,7 +556,7 @@
     s = {
       ...original(),
       ...d,
-      loans: d.loans.map((l) => ({ ...l })),
+      loans: d.loans.map((l) => ({ handover: "", ...l })),
       notes: d.notes.map((n) => ({ ...n })),
     };
     paint();
