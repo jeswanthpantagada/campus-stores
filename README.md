@@ -42,13 +42,19 @@ When Kabir returns the projector (`PR-04`) and speaker (`SP-02`) but leaves the 
 
 ### 3. Prototype & Walkthrough
 **Changes made (`app.js`, `styles.css`):**
-* **Contextual loan slips:** Each row in `Loan register` now displays the equipment type (e.g., `USB-C → HDMI adapter`) and club name (`Film Society`) alongside the asset and request IDs.
-* **Inline handover notes & due-time updates:** Open slips now include a **Handover note** button. Saving a handover note attaches a highlighted callout directly to that loan slip, updates its due time, and automatically logs a matching entry in the `Desk book`.
+- **Contextual loan slips:** Each row in `Loan register` now displays the equipment type (e.g., `USB-C → HDMI adapter`) and club name (`Film Society`) alongside the asset and request IDs.
+- **Inline handover notes & due-time updates:** Open slips now include a **Handover note** button. Saving a handover note attaches a highlighted callout directly to that loan slip, updates its due time, and automatically logs a matching entry in the `Desk book`.
+- **Custody transfer ("Now with"):** Staff can update who currently holds an item (e.g., from `Kabir Sen` to `Leela Das`) right inside the handover form.
+- **Undo return safeguard:** Returned slips include an **Undo** button so accidental clicks during a busy shift can be reversed safely.
 
 **Walkthrough of the Film Society shift with the prototype:**
 1. **Friday · 3:45 pm:** Issue `PR-04`, `SP-02`, and `AD-12` to Kabir Sen under `RQ-214`.
-2. **Friday · 7:30 pm:** Click **Record return** on `PR-04` and `SP-02`. On the remaining `AD-12` slip, click **Handover note**, enter *"Leela Das has adapter; returning Sat 9 am"*, update the due time to `Sat 9 am`, and save.
-3. **Saturday · 9:00 am:** When Leela walks in, the morning worker opens **Loan register**, immediately sees `AD-12 · USB-C → HDMI adapter · Film Society` with the highlighted handover note naming Leela, and clicks **Record return** in one step.
+2. **Friday · 7:30 pm:** Click **Record return** on `PR-04` and `SP-02`. On the remaining `AD-12` slip, click **Handover note**, enter *"Returning adapter tomorrow at 9 am"*, change **Now with** to `Leela Das`, update the due time to `Sat 9 am`, and save.
+3. **Saturday · 9:00 am:** When Leela walks in, the morning worker opens **Loan register**, immediately sees `AD-12 · USB-C → HDMI adapter · Film Society · Leela Das · Due Sat 9 am` with the highlighted handover note, and clicks **Record return** in one step.
+
+<img width="799" height="439" alt="Screenshot 2026-11-19 at 12 38 58 AM" src="https://github.com/user-attachments/assets/00c357dd-17d4-40f8-92e2-f44641820e83" />
+
+
 
 ### 4. What I would keep
 * **One slip per physical unit:** Tracking individual units (rather than a single bulk loan) is essential when kits come back in pieces.
