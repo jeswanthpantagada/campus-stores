@@ -369,3 +369,24 @@ body > main {
     min-height: 44px;
   }
 }
+#campus-stores .row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+#campus-stores .handover-note {
+  margin-top: 6px;
+  padding: 6px 9px;
+  border-radius: 5px;
+  background: var(--memo);
+  color: var(--memotxt);
+  font-size: 12.5px;
+}
+#campus-stores .inline-handover {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--desk);
+  border: 1px solid var(--line);
+}
