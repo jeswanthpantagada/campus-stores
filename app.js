@@ -167,7 +167,7 @@
     esc(sub) +
     "</small>" +
     extra +
-    "</div><div class=\"row-actions\">" +
+    '</div><div class="row-actions">' +
     right +
     "</div></div>";
   const badge = (t, good = false) =>
@@ -321,9 +321,14 @@
         extra +=
           '<form class="inline-handover" data-handover="' +
           l.num +
-          '"><div class="form"><label class="full"><span>Handover note for next shift</span><input type="text" name="handover" maxlength="200" placeholder="e.g. Leela Das has adapter; returning Sat 9 am" value="' +
+          '"><div class="form"><label class="full"><span>Handover note for next shift</span><input type="text" name="handover" maxlength="200" placeholder="e.g. Returning adapter tomorrow at 9 am" value="' +
           esc(l.handover || "") +
-          '" required /></label><label><span>Updated return by</span><select name="due">' +
+          '" required /></label><label><span>Now with</span><select name="who">' +
+          opts(
+            people.map((p) => [p, p]),
+            l.who,
+          ) +
+          '</select></label><label><span>Updated return by</span><select name="due">' +
           opts(
             dueOptions.map((d) => [d, d]),
             l.due,
@@ -333,7 +338,7 @@
           "</div></form>";
       }
       const actions = l.back
-        ? badge("Returned")
+        ? badge("Returned") + btn("Undo", "undo-return", String(l.num))
         : btn(
             l.handover ? "Edit handover" : "Handover note",
             "handover",
@@ -471,6 +476,18 @@
         s.notice = l.asset + " returned to stock. Slip L-" + l.num + " closed.";
         break;
       }
+      case "undo-return": {
+        const l = s.loans.find((l) => l.num === Number(v));
+        if (!l || !l.back) return;
+        if (out(l.asset)) {
+          s.notice = l.asset + " is already out on another open slip.";
+          break;
+        }
+        l.back = false;
+        s.notice =
+          "Return undone. Slip L-" + l.num + " (" + l.asset + ") is open again.";
+        break;
+      }
     }
     commit();
   });
@@ -495,16 +512,31 @@
       const loanNum = Number(f.dataset.handover);
       const l = s.loans.find((x) => x.num === loanNum);
       const text = String(form.get("handover") || "").trim();
+      const who = String(form.get("who") || "");
       const due = String(form.get("due") || "");
       if (!l || l.back || !text) return;
       l.handover = text;
+      if (people.includes(who)) l.who = who;
       if (dueOptions.includes(due)) l.due = due;
       s.handoverLoan = null;
       s.notes.push({
         phase: s.phase,
-        text: "Slip L-" + l.num + " (" + l.asset + "): " + text + " [Due " + l.due + "]",
+        text:
+          "Slip L-" +
+          l.num +
+          " (" +
+          l.asset +
+          ", now with " +
+          l.who +
+          "): " +
+          text +
+          " [Due " +
+          l.due +
+          "]",
       });
-      commit("Handover note attached to slip L-" + l.num + " and logged in Desk book.");
+      commit(
+        "Handover saved on slip L-" + l.num + " and logged in Desk book.",
+      );
       return;
     }
     if (!f.matches("[data-issue]")) return;
